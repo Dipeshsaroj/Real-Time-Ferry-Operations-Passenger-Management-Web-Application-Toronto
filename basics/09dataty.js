@@ -20,7 +20,7 @@
 //+++++++++++++++++++++++++++
 
 //two memory heap and stack where stack makes copy and heap directly pass by reference
-let myYoutubename = "hiteshchoudharydotcom"
+let myYoutubena = "hiteshchoudharydotcom"
 let anothername = myYoutubename
 anothername = "chaiaurcode"
 console. log (myYoutubename) ; 
