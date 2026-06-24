@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader } from 'lucide-react';
-import { useRouter } from '@/i18n/routing';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function RegisterPage({
