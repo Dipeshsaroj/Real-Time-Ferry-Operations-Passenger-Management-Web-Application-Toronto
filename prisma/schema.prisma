@@ -1,0 +1,200 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String          @id @default(uuid())
+  name              String
+  email             String          @unique
+  passwordHash      String
+  role              String          @default("citizen") // citizen, staff, admin
+  language          String          @default("en") // en, fr
+  notificationPrefs String          @default("email") // e.g. "email", "sms", "email,sms"
+  createdAt         DateTime        @default(now())
+  bookings          Booking[]
+  permitRequests    PermitRequest[]
+  alerts            Alert[]
+  auditLogs         AuditLog[]
+  acceptedRequests  MaintenanceRequest[]
+}
+
+model Terminal {
+  id                    String   @id @default(uuid())
+  name                  String
+  lat                   Float
+  lng                   Float
+  address               String
+  accessibilityFeatures String   // JSON string array
+  routesAsOrigin        Route[]  @relation("OriginTerminal")
+  routesAsDestination   Route[]  @relation("DestinationTerminal")
+}
+
+model Route {
+  id                     String     @id @default(uuid())
+  name                   String
+  originTerminalId       String
+  originTerminal         Terminal   @relation("OriginTerminal", fields: [originTerminalId], references: [id], onDelete: Cascade)
+  destinationTerminalId  String
+  destinationTerminal    Terminal   @relation("DestinationTerminal", fields: [destinationTerminalId], references: [id], onDelete: Cascade)
+  distanceKm             Float
+  estimatedDurationMin   Int
+  schedules              Schedule[]
+  alerts                 Alert[]
+}
+
+model Ferry {
+  id        String     @id @default(uuid())
+  name      String
+  capacity  Int
+  status    String     @default("active") // active, maintenance, retired
+  schedules Schedule[]
+}
+
+model Schedule {
+  id                 String    @id @default(uuid())
+  routeId            String
+  route              Route     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  ferryId            String
+  ferry              Ferry     @relation(fields: [ferryId], references: [id], onDelete: Cascade)
+  departureTime      DateTime
+  arrivalTime        DateTime
+  recurrenceRule     String?
+  status             String    @default("on-time") // on-time, delayed, cancelled, boarding
+  capacityRemaining  Int
+  bookings           Booking[]
+
+  @@index([departureTime])
+}
+
+model Booking {
+  id             String   @id @default(uuid())
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestEmail     String?
+  scheduleId     String
+  schedule       Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  passengerCount Int
+  status         String   @default("confirmed") // confirmed, cancelled
+  qrCodeToken    String   @unique
+  createdAt      DateTime @default(now())
+
+  @@index([scheduleId])
+}
+
+model Alert {
+  id          String   @id @default(uuid())
+  title       String
+  body        String
+  severity    String   @default("info") // info, warning, critical
+  routeId     String?
+  route       Route?   @relation(fields: [routeId], references: [id], onDelete: SetNull)
+  validFrom   DateTime
+  validUntil  DateTime
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([validUntil])
+}
+
+model Park {
+  id                    String    @id @default(uuid())
+  name                  String
+  description           String
+  lat                   Float
+  lng                   Float
+  images                String    // JSON string array
+  accessibilityFeatures String    // JSON string array
+  hoursJson             String    // JSON string object
+  programs              Program[]
+}
+
+model Program {
+  id          String  @id @default(uuid())
+  name        String
+  description String
+  category    String
+  schedule    String
+  parkId      String?
+  park        Park?   @relation(fields: [parkId], references: [id], onDelete: SetNull)
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  startAt     DateTime
+  endAt       DateTime
+  location    String
+  rsvpCount   Int      @default(0)
+}
+
+model PermitRequest {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  facility       String
+  dateRangeStart DateTime
+  dateRangeEnd   DateTime
+  purpose        String
+  status         String   @default("pending") // pending, approved, denied
+}
+
+model Page {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  title       String
+  body        String
+  language    String   @default("en") // en, fr
+  publishedAt DateTime @default(now())
+}
+
+model Announcement {
+  id          String   @id @default(uuid())
+  title       String
+  body        String
+  language    String   @default("en") // en, fr
+  publishedAt DateTime @default(now())
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(uuid())
+  type      String
+  path      String
+  sessionId String
+  createdAt DateTime @default(now())
+  metaJson  String   // JSON string object
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action     String
+  entityType String
+  entityId   String
+  diffJson   String   // JSON string object
+  createdAt  DateTime @default(now())
+}
+
+model MaintenanceRequest {
+  id             String    @id @default(uuid())
+  title          String
+  description    String
+  facilityType   String    // e.g. "ferry", "park", "terminal"
+  facilityName   String    // name of the specific asset
+  status         String    @default("pending") // pending, accepted, completed
+  reportedBy     String    // name/email of citizen/staff reporting the issue
+  acceptedById   String?
+  acceptedBy     User?     @relation(fields: [acceptedById], references: [id], onDelete: SetNull)
+  createdAt      DateTime  @default(now())
+  acceptedAt     DateTime?
+  completedAt    DateTime?
+}
