@@ -16,6 +16,11 @@ const nextConfig = {
       config.cache = false;
     }
     return config;
+  },
+  experimental: {
+    outputFileTracingIncludes: {
+      '/**/*': ['./prisma/dev.db'],
+    },
   }
 };
 
